@@ -1,0 +1,64 @@
+---
+title: "Convert Seurat Object to AnnData Object"
+output: html_document
+author: B282025
+---
+
+This R markdown file is used to load in a Seurat spatial transcriptomics data object and convert it to an AnnData object for analysis in Python.
+
+Reference: https://bioconductor.org/packages//release/bioc/vignettes/anndataR/inst/doc/usage_seurat.html#writing-a-seurat-object-to-a-h5ad-file-or-zarr-store
+
+```{r}
+# Install packages
+library(anndataR)
+library(Seurat)
+library(Signac)
+```
+
+```{r}
+# Read in the Seurat object
+seurat_object <- readRDS("GSE282059_seurat_object_cosmx6k.rds")
+```
+
+```{r}
+# Explore the Seurat object
+Assays(seurat_object)
+```
+
+```{r}
+# Check for non-ASCII characters which cannot be converted
+grep("[^\x01-\x7F]", seurat_object@meta.data$Annotation.Lvl2, value = TRUE)
+```
+
+```{r}
+# Ensure the Seurat object is labeled consistently
+identical(Cells(seurat_object), rownames(Embeddings(seurat_object, "pca")))
+length(Cells(seurat_object))
+nrow(Embeddings(seurat_object, "pca"))
+
+# Check for actual differences
+setdiff(Cells(seurat_object), rownames(Embeddings(seurat_object, "pca")))
+setdiff(rownames(Embeddings(seurat_object, "pca")), Cells(seurat_object))
+```
+
+```{r}
+# Fix the ordering
+seurat_object[["pca"]]@cell.embeddings <- seurat_object[["pca"]]@cell.embeddings[Cells(seurat_object), ]
+```
+
+```{r}
+# Check for differences
+identical(Cells(seurat_object), rownames(Embeddings(seurat_object, "pca")))
+```
+
+```{r}
+# Check for differences
+Reductions(seurat_object)
+identical(Cells(seurat_object), rownames(Embeddings(seurat_object, "umap")))
+```
+
+```{r}
+# Write out the AnnData object
+write_h5ad(seurat_object, "GSE282059_anndata_object.h5ad")
+```
+
